@@ -1,0 +1,122 @@
+[
+  {
+    "id": 1,
+    "firstName": "Liam",
+    "lastName": "Martinez",
+    "grade": 12,
+    "studentNumber": "ST1001",
+    "homeroom": "HR10A"
+  },
+  {
+    "id": 2,
+    "firstName": "Emma",
+    "lastName": "Zhao",
+    "grade": 11,
+    "studentNumber": "ST1002",
+    "homeroom": "HR11B"
+  },
+  {
+    "id": 3,
+    "firstName": "Noah",
+    "lastName": "O'Connor",
+    "grade": 12,
+    "studentNumber": "ST1003",
+    "homeroom": "HR12C"
+  },
+  {
+    "id": 4,
+    "firstName": "Ava",
+    "lastName": "Singh",
+    "grade": 9,
+    "studentNumber": "ST1004",
+    "homeroom": "HR9A"
+  },
+  {
+    "id": 5,
+    "firstName": "Ethan",
+    "lastName": "Brown",
+    "grade": 10,
+    "studentNumber": "ST1005",
+    "homeroom": "HR10C"
+  },
+  {
+    "id": 6,
+    "firstName": "Isabella",
+    "lastName": "Santos",
+    "grade": 11,
+    "studentNumber": "ST1006",
+    "homeroom": "HR11A"
+  },
+  {
+    "id": 7,
+    "firstName": "Mason",
+    "lastName": "Kim",
+    "grade": 12,
+    "studentNumber": "ST1007",
+    "homeroom": "HR12B"
+  },
+  {
+    "id": 8,
+    "firstName": "Sophia",
+    "lastName": "Harris",
+    "grade": 9,
+    "studentNumber": "ST1008",
+    "homeroom": "HR9B"
+  },
+  {
+    "id": 9,
+    "firstName": "Jackson",
+    "lastName": "Lee",
+    "grade": 10,
+    "studentNumber": "ST1009",
+    "homeroom": "HR10B"
+  },
+  {
+    "id": 10,
+    "firstName": "Mia",
+    "lastName": "Williams",
+    "grade": 11,
+    "studentNumber": "ST1010",
+    "homeroom": "HR11C"
+  },
+  {
+    "id": 11,
+    "firstName": "Lucas",
+    "lastName": "Thompson",
+    "grade": 12,
+    "studentNumber": "ST1011",
+    "homeroom": "HR12A"
+  },
+  {
+    "id": 12,
+    "firstName": "Amelia",
+    "lastName": "Patel",
+    "grade": 9,
+    "studentNumber": "ST1012",
+    "homeroom": "HR9C"
+  },
+  {
+    "id": 13,
+    "firstName": "Logan",
+    "lastName": "Garcia",
+    "grade": 10,
+    "studentNumber": "ST1013",
+    "homeroom": "HR10D"
+  },
+  {
+    "id": 14,
+    "firstName": "Harper",
+    "lastName": "Bennett",
+    "grade": 11,
+    "studentNumber": "ST1014",
+    "homeroom": "HR11D"
+  },
+  {
+    "id": 15,
+    "firstName": "Benjamin",
+    "lastName": "Cruz",
+    "grade": 12,
+    "studentNumber": "ST1015",
+    "homeroom": "HR12D"
+  }
+]

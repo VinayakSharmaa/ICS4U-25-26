@@ -1,0 +1,254 @@
+[
+  {
+    "id": 1,
+    "studentId": 1,
+    "courseId": 1,
+    "testName": "Functions Quiz 1",
+    "date": "2025-02-10",
+    "mark": 95,
+    "outOf": 20,
+    "weight": 10
+  },
+  {
+    "id": 2,
+    "studentId": 2,
+    "courseId": 2,
+    "testName": "Biology Unit Test",
+    "date": "2025-02-15",
+    "mark": 42,
+    "outOf": 50,
+    "weight": 20
+  },
+  {
+    "id": 3,
+    "studentId": 3,
+    "courseId": 3,
+    "testName": "Literature Analysis",
+    "date": "2025-03-01",
+    "mark": 35,
+    "outOf": 40,
+    "weight": 15
+  },
+  {
+    "id": 4,
+    "studentId": 4,
+    "courseId": 4,
+    "testName": "History Quiz",
+    "date": "2025-03-05",
+    "mark": 24,
+    "outOf": 30,
+    "weight": 10
+  },
+  {
+    "id": 5,
+    "studentId": 5,
+    "courseId": 5,
+    "testName": "Art Project 1",
+    "date": "2025-02-20",
+    "mark": 46,
+    "outOf": 50,
+    "weight": 25
+  },
+  {
+    "id": 6,
+    "studentId": 6,
+    "courseId": 6,
+    "testName": "Fitness Assessment",
+    "date": "2025-01-18",
+    "mark": 90,
+    "outOf": 100,
+    "weight": 10
+  },
+  {
+    "id": 7,
+    "studentId": 7,
+    "courseId": 1,
+    "testName": "Functions Test",
+    "date": "2025-02-25",
+    "mark": 72,
+    "outOf": 80,
+    "weight": 20
+  },
+  {
+    "id": 8,
+    "studentId": 8,
+    "courseId": 2,
+    "testName": "Cells & Systems Quiz",
+    "date": "2025-02-12",
+    "mark": 15,
+    "outOf": 20,
+    "weight": 5
+  },
+  {
+    "id": 9,
+    "studentId": 9,
+    "courseId": 3,
+    "testName": "Poetry Response",
+    "date": "2025-03-10",
+    "mark": 28,
+    "outOf": 30,
+    "weight": 10
+  },
+  {
+    "id": 10,
+    "studentId": 10,
+    "courseId": 4,
+    "testName": "World History Midterm",
+    "date": "2025-03-15",
+    "mark": 67,
+    "outOf": 80,
+    "weight": 30
+  },
+  {
+    "id": 11,
+    "studentId": 11,
+    "courseId": 5,
+    "testName": "Art Sketch Portfolio",
+    "date": "2025-02-28",
+    "mark": 38,
+    "outOf": 40,
+    "weight": 15
+  },
+  {
+    "id": 12,
+    "studentId": 12,
+    "courseId": 6,
+    "testName": "Daily Fitness Log",
+    "date": "2025-01-30",
+    "mark": 48,
+    "outOf": 50,
+    "weight": 5
+  },
+  {
+    "id": 13,
+    "studentId": 13,
+    "courseId": 1,
+    "testName": "Linear Relations Test",
+    "date": "2025-03-05",
+    "mark": 33,
+    "outOf": 40,
+    "weight": 20
+  },
+  {
+    "id": 14,
+    "studentId": 14,
+    "courseId": 2,
+    "testName": "Genetics Quiz",
+    "date": "2025-03-08",
+    "mark": 17,
+    "outOf": 20,
+    "weight": 5
+  },
+  {
+    "id": 15,
+    "studentId": 15,
+    "courseId": 3,
+    "testName": "Novel Study Test",
+    "date": "2025-03-18",
+    "mark": 44,
+    "outOf": 50,
+    "weight": 20
+  },
+  {
+    "id": 16,
+    "studentId": 1,
+    "courseId": 4,
+    "testName": "Civilizations Quiz",
+    "date": "2025-03-22",
+    "mark": 25,
+    "outOf": 30,
+    "weight": 10
+  },
+  {
+    "id": 17,
+    "studentId": 2,
+    "courseId": 5,
+    "testName": "Colour Theory Project",
+    "date": "2025-03-25",
+    "mark": 47,
+    "outOf": 50,
+    "weight": 20
+  },
+  {
+    "id": 18,
+    "studentId": 3,
+    "courseId": 6,
+    "testName": "Cooper Test",
+    "date": "2025-02-14",
+    "mark": 82,
+    "outOf": 100,
+    "weight": 15
+  },
+  {
+    "id": 19,
+    "studentId": 4,
+    "courseId": 1,
+    "testName": "Quadratics Quiz",
+    "date": "2025-03-10",
+    "mark": 13,
+    "outOf": 20,
+    "weight": 5
+  },
+  {
+    "id": 20,
+    "studentId": 5,
+    "courseId": 2,
+    "testName": "Ecosystems Test",
+    "date": "2025-03-12",
+    "mark": 39,
+    "outOf": 50,
+    "weight": 20
+  },
+  {
+    "id": 21,
+    "studentId": 6,
+    "courseId": 3,
+    "testName": "Short Story Quiz",
+    "date": "2025-03-04",
+    "mark": 18,
+    "outOf": 20,
+    "weight": 5
+  },
+  {
+    "id": 22,
+    "studentId": 7,
+    "courseId": 4,
+    "testName": "Historical Events Assignment",
+    "date": "2025-03-28",
+    "mark": 29,
+    "outOf": 30,
+    "weight": 15
+  },
+  {
+    "id": 23,
+    "studentId": 8,
+    "courseId": 5,
+    "testName": "Perspective Drawing",
+    "date": "2025-03-30",
+    "mark": 45,
+    "outOf": 50,
+    "weight": 15
+  },
+  {
+    "id": 24,
+    "studentId": 9,
+    "courseId": 6,
+    "testName": "Strength Test",
+    "date": "2025-02-22",
+    "mark": 76,
+    "outOf": 100,
+    "weight": 15
+  },
+  {
+    "id": 25,
+    "studentId": 10,
+    "courseId": 1,
+    "testName": "Algebra Unit Test",
+    "date": "2025-03-18",
+    "mark": 34,
+    "outOf": 40,
+    "weight": 20
+  }
+]
+
+ 
