@@ -1,185 +1,239 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
+require("dotenv").config();
+const mongoose = require("mongoose");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-const teachers_file = path.join(__dirname, "data/teachers.json");
-const courses_file = path.join(__dirname, "data/courses.json");
-const students_file = path.join(__dirname, "data/students.json");
-const tests_file = path.join(__dirname, "data/tests.json");
-
-function loadJson(filePath) {
-    if (!fs.existsSync(filePath)) return [];
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
-}
-
-function saveJson(filePath, data) {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
-}
-
-let teachers = loadJson(teachers_file);
-let courses = loadJson(courses_file);
-let students = loadJson(students_file);
-let tests = loadJson(tests_file);
-
-let nextTeachersId = teachers.reduce((max, t) => Math.max(max, t.id), 0) + 1;
-let nextCoursesId = courses.reduce((max, c) => Math.max(max, c.id), 0) + 1;
-let nextStudentsId = students.reduce((max, s) => Math.max(max, s.id), 0) + 1;
-let nextTestsId = tests.reduce((max, i) => Math.max(max, i.id), 0) + 1;
-
-
-
-
-
-// TEACHERS
+// ----------------------
+// MongoDB Connection
+// ----------------------
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => console.log("Connected to MongoDB"))
+  .catch(err => console.error("MongoDB connection error:", err));
 
 // ----------------------
+// Counter (for numeric IDs)
+// Collection: counters
+// ----------------------
+const CounterSchema = new mongoose.Schema(
+  {
+    _id: { type: String, required: true }, // "teachers", "courses", "students", "tests"
+    seq: { type: Number, default: 0 }
+  },
+  { collection: "counters" }
+);
 
-app.get("/teachers", (req, res) => {
-  // res.json(teachers);
+const Counter = mongoose.model("Counter", CounterSchema);
+
+async function getNextId(sequenceName) {
+  const counter = await Counter.findByIdAndUpdate(
+    sequenceName,
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  return counter.seq;
+}
+
+// ----------------------
+// Schemas / Models
+// ----------------------
+const TeacherSchema = new mongoose.Schema(
+  {
+    id: { type: Number, required: true, unique: true },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    email: { type: String, required: true },
+    department: { type: String, required: true }
+  },
+  { collection: "teachers" }
+);
+const Teacher = mongoose.model("Teacher", TeacherSchema);
+
+const CourseSchema = new mongoose.Schema(
+  {
+    id: { type: Number, required: true, unique: true },
+    code: { type: String, required: true },
+    name: { type: String, required: true },
+    teacherId: { type: Number, required: true },
+    semester: { type: String, required: true },
+    room: { type: String, required: true },
+    schedule: { type: String } // optional
+  },
+  { collection: "courses" }
+);
+const Course = mongoose.model("Course", CourseSchema);
+
+const StudentSchema = new mongoose.Schema(
+  {
+    id: { type: Number, required: true, unique: true },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    grade: { type: Number, required: true },
+    studentNumber: { type: String, required: true },
+    homeroom: { type: String } // optional
+  },
+  { collection: "students" }
+);
+const Student = mongoose.model("Student", StudentSchema);
+
+const TestSchema = new mongoose.Schema(
+  {
+    id: { type: Number, required: true, unique: true },
+    studentId: { type: Number, required: true },
+    courseId: { type: Number, required: true },
+    testName: { type: String, required: true },
+    date: { type: String, required: true },
+    mark: { type: Number, required: true },
+    outOf: { type: Number, required: true },
+    weight: { type: Number, required: true }
+  },
+  { collection: "tests" }
+);
+const Test = mongoose.model("Test", TestSchema);
+
+// ----------------------
+// TEACHERS CRUD
+// ----------------------
+app.get("/teachers", async (req, res) => {
+  const teachers = await Teacher.find().sort({ id: 1 });
+  res.json(teachers);
 });
 
-app.get("/teachers/:id", (req, res) => {
+app.get("/teachers/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const teacher = teachers.find(t => t.id === id);
-
-  if (!teacher) {
-    return res.status(404).json({ error: "Teacher not found" });
-  }
-
-  // res.json(teacher);
+  const teacher = await Teacher.findOne({ id });
+  if (!teacher) return res.status(404).json({ error: "Teacher not found" });
+  res.json(teacher);
 });
 
-app.post("/teachers", (req, res) => {
-  const { firstName, lastName, email, department } = req.body;
-  if (!firstName || !lastName || !email || !department) {
-    return res.status(400).json({ error: "Missing required fields" });
+app.post("/teachers", async (req, res) => {
+  try {
+    const { firstName, lastName, email, department } = req.body;
+    if (!firstName || !lastName || !email || !department) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const newTeacher = await Teacher.create({
+      id: await getNextId("teachers"),
+      firstName,
+      lastName,
+      email,
+      department
+    });
+
+    res.status(201).json(newTeacher);
+  } catch (err) {
+    res.status(500).json({ error: "Server error", details: err.message });
   }
-  const newTeacher = {
-    id: nextTeachersId++,
-    firstName,
-    lastName,
-    email,
-    department,
-  };
-  teachers.push(newTeacher);
-  saveJson(teachers_file, teachers);
-  res.status(201).json(newTeacher);
 });
 
-app.put("/teachers/:id", (req, res) => {
+app.put("/teachers/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const teacher = teachers.find(t => t.id === id);
-  if (!teacher) {
-    return res.status(404).json({ error: "Teacher not found" });
-  }
   const { firstName, lastName, email, department } = req.body;
 
-  if (!firstName && !lastName && !email && !department) {
+  if (
+    firstName === undefined &&
+    lastName === undefined &&
+    email === undefined &&
+    department === undefined
+  ) {
     return res.status(400).json({ error: "No fields provided to update" });
   }
+
+  const teacher = await Teacher.findOne({ id });
+  if (!teacher) return res.status(404).json({ error: "Teacher not found" });
 
   if (firstName !== undefined) teacher.firstName = firstName;
   if (lastName !== undefined) teacher.lastName = lastName;
   if (email !== undefined) teacher.email = email;
   if (department !== undefined) teacher.department = department;
 
-
-  saveJson(teachers_file, teachers);
-
+  await teacher.save();
   res.json(teacher);
 });
 
-
-app.delete("/teachers/:id", (req, res) => {
+app.delete("/teachers/:id", async (req, res) => {
   const id = Number(req.params.id);
 
-  //TODO: Optional Check (?)
-
-  const index = teachers.findIndex(t => t.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: "Teacher not found" });
+  // Optional: block delete if teacher is referenced by a course
+  const used = await Course.exists({ teacherId: id });
+  if (used) {
+    return res.status(400).json({
+      error: "Cannot delete teacher who is assigned to courses. Update/delete courses first."
+    });
   }
 
-  const deleted = teachers.splice(index, 1)[0];
-  saveJson(teachers_file, teachers);
+  const deleted = await Teacher.findOneAndDelete({ id });
+  if (!deleted) return res.status(404).json({ error: "Teacher not found" });
 
   res.json(deleted);
 });
 
-
-
-// COURSES
-
 // ----------------------
-
-app.get("/courses", (req, res) => {
+// COURSES CRUD
+// ----------------------
+app.get("/courses", async (req, res) => {
+  const courses = await Course.find().sort({ id: 1 });
   res.json(courses);
 });
 
-app.get("/courses/:id", (req, res) => {
+app.get("/courses/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const course = courses.find(c => c.id === id);
-
-  if (!course) {
-    return res.status(404).json({ error: "Course not found" });
-  }
-
+  const course = await Course.findOne({ id });
+  if (!course) return res.status(404).json({ error: "Course not found" });
   res.json(course);
 });
 
-app.post("/courses", (req, res) => {
+app.post("/courses", async (req, res) => {
+  const { code, name, teacherId, semester, room, schedule } = req.body;
 
-  const { code, name, teacherId, semester, room } = req.body;
-
-  if (!code || !name || !teacherId || !semester || !room) {
+  if (!code || !name || teacherId === undefined || !semester || !room) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  const teacher = teachers.find(t => t.id === Number(teacherId));
+  const teacher = await Teacher.findOne({ id: Number(teacherId) });
   if (!teacher) {
     return res.status(400).json({ error: "teacherId is invalid!" });
   }
 
-  const newCourse = {
-    id: nextCoursesId++,
+  const newCourse = await Course.create({
+    id: await getNextId("courses"),
     code,
     name,
     teacherId: Number(teacherId),
     semester,
-    room
-  };
-
-  courses.push(newCourse);
-  saveJson(courses_file, courses);
+    room,
+    schedule: schedule || ""
+  });
 
   res.status(201).json(newCourse);
 });
 
-app.put("/courses/:id", (req, res) => {
+app.put("/courses/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const course = courses.find(c => c.id === id);
+  const { code, name, teacherId, semester, room, schedule } = req.body;
 
-  if (!course) {
-    return res.status(404).json({ error: "Course not found" });
-  }
-
-  const { code, name, teacherId, semester, room } = req.body;
-
-  if (!code && !name && !teacherId && !semester && !room) {
+  if (
+    code === undefined &&
+    name === undefined &&
+    teacherId === undefined &&
+    semester === undefined &&
+    room === undefined &&
+    schedule === undefined
+  ) {
     return res.status(400).json({ error: "No fields provided to update" });
   }
 
-  // validate teacherid if it is changed
+  const course = await Course.findOne({ id });
+  if (!course) return res.status(404).json({ error: "Course not found" });
+
   if (teacherId !== undefined) {
-    const teacher = teachers.find(t => t.id === Number(teacherId));
-    if (!teacher) {
-      return res.status(400).json({ error: "teacherId is invalid!" });
-    }
+    const teacher = await Teacher.findOne({ id: Number(teacherId) });
+    if (!teacher) return res.status(400).json({ error: "teacherId is invalid!" });
     course.teacherId = Number(teacherId);
   }
 
@@ -187,151 +241,143 @@ app.put("/courses/:id", (req, res) => {
   if (name !== undefined) course.name = name;
   if (semester !== undefined) course.semester = semester;
   if (room !== undefined) course.room = room;
+  if (schedule !== undefined) course.schedule = schedule;
 
-  saveJson(courses_file, courses);
-
+  await course.save();
   res.json(course);
 });
 
-
-app.delete("/courses/:id", (req, res) => {
+app.delete("/courses/:id", async (req, res) => {
   const id = Number(req.params.id);
 
-  //TODO: Optional Check (?)
-
-   const index = courses.findIndex(c => c.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: "Course not found" });
+  // Optional: block delete if tests exist for this course
+  const used = await Test.exists({ courseId: id });
+  if (used) {
+    return res.status(400).json({
+      error: "Cannot delete course that has tests. Delete/update tests first."
+    });
   }
 
-  const deleted = courses.splice(index, 1)[0];
-  saveJson(courses_file, courses);
-
+  const deleted = await Course.findOneAndDelete({ id });
+  if (!deleted) return res.status(404).json({ error: "Course not found" });
   res.json(deleted);
 });
 
-
-// STUDENTS
-
 // ----------------------
-
-app.get("/students", (req, res) => {
+// STUDENTS CRUD
+// ----------------------
+app.get("/students", async (req, res) => {
+  const students = await Student.find().sort({ id: 1 });
   res.json(students);
 });
 
-app.get("/students/:id", (req, res) => {
+app.get("/students/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const student = students.find(s => s.id === id);
-
-  if (!student) {
-    return res.status(404).json({ error: "Student not found" });
-  }
-
+  const student = await Student.findOne({ id });
+  if (!student) return res.status(404).json({ error: "Student not found" });
   res.json(student);
 });
 
-app.post("/students", (req, res) => {
-  const { firstName, lastName, grade, studentNumber } = req.body;
+app.post("/students", async (req, res) => {
+  const { firstName, lastName, grade, studentNumber, homeroom } = req.body;
 
-  if (!firstName || !lastName || !grade || !studentNumber) {
+  if (!firstName || !lastName || grade === undefined || !studentNumber) {
     return res.status(400).json({ error: "Missing required fields" });
   }
-  
-   const newStudent = {
-    id: nextStudentsId++,
+
+  const newStudent = await Student.create({
+    id: await getNextId("students"),
     firstName,
     lastName,
-    grade,
+    grade: Number(grade),
     studentNumber,
-  };
-
-  students.push(newStudent);
-  saveJson(students_file, students);
+    homeroom: homeroom || ""
+  });
 
   res.status(201).json(newStudent);
 });
 
-app.put("/students/:id", (req, res) => {
+app.put("/students/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const student = students.find(s => s.id === id);
-
-  if (!student) {
-    return res.status(404).json({ error: "Student not found" });
-  }
-
   const { firstName, lastName, grade, studentNumber, homeroom } = req.body;
 
-  if (!firstName && !lastName && !grade && !studentNumber) {
+  if (
+    firstName === undefined &&
+    lastName === undefined &&
+    grade === undefined &&
+    studentNumber === undefined &&
+    homeroom === undefined
+  ) {
     return res.status(400).json({ error: "No fields provided to update" });
   }
 
+  const student = await Student.findOne({ id });
+  if (!student) return res.status(404).json({ error: "Student not found" });
+
   if (firstName !== undefined) student.firstName = firstName;
   if (lastName !== undefined) student.lastName = lastName;
-  if (grade !== undefined) student.grade = grade;
+  if (grade !== undefined) student.grade = Number(grade);
   if (studentNumber !== undefined) student.studentNumber = studentNumber;
   if (homeroom !== undefined) student.homeroom = homeroom;
 
-
-  saveJson(students_file, students);
-
+  await student.save();
   res.json(student);
 });
 
-
-app.delete("/students/:id", (req, res) => {
+app.delete("/students/:id", async (req, res) => {
   const id = Number(req.params.id);
 
-  const index = students.findIndex(s => s.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: "Student not found" });
+  // Optional: block delete if tests exist for this student
+  const used = await Test.exists({ studentId: id });
+  if (used) {
+    return res.status(400).json({
+      error: "Cannot delete student that has tests. Delete/update tests first."
+    });
   }
 
-  const deleted = students.splice(index, 1)[0];
-  saveJson(students_file, students);
-
+  const deleted = await Student.findOneAndDelete({ id });
+  if (!deleted) return res.status(404).json({ error: "Student not found" });
   res.json(deleted);
 });
 
-
-// TESTS
-
 // ----------------------
-
-app.get("/tests", (req, res) => {
+// TESTS CRUD
+// ----------------------
+app.get("/tests", async (req, res) => {
+  const tests = await Test.find().sort({ id: 1 });
   res.json(tests);
 });
 
-app.get("/tests/:id", (req, res) => {
+app.get("/tests/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const test = tests.find(t => t.id === id);
-
-  if (!test) {
-    return res.status(404).json({ error: "Test not found" });
-  }
-
+  const test = await Test.findOne({ id });
+  if (!test) return res.status(404).json({ error: "Test not found" });
   res.json(test);
 });
 
-app.post("/tests", (req, res) => {
+app.post("/tests", async (req, res) => {
   const { studentId, courseId, testName, date, mark, outOf, weight } = req.body;
 
-  if (!studentId || !courseId || !testName || !date || mark === undefined || outOf === undefined || weight === undefined ) {
+  if (
+    studentId === undefined ||
+    courseId === undefined ||
+    !testName ||
+    !date ||
+    mark === undefined ||
+    outOf === undefined ||
+    weight === undefined
+  ) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  const studentExistence = students.some(s => s.id === Number(studentId));
-  if (!studentExistence) {
-    return res.status(400).json({ error: "studentId is invalid!" });
-  }
+  const studentExists = await Student.exists({ id: Number(studentId) });
+  if (!studentExists) return res.status(400).json({ error: "studentId is invalid!" });
 
-  const courseExistence = courses.some(c => c.id === Number(courseId));
-  if (!courseExistence) {
-    return res.status(400).json({ error: "courseId is invalid!" });
-  }
+  const courseExists = await Course.exists({ id: Number(courseId) });
+  if (!courseExists) return res.status(400).json({ error: "courseId is invalid!" });
 
-  
- const newTest = {
-    id: nextTestsId++,
+  const newTest = await Test.create({
+    id: await getNextId("tests"),
     studentId: Number(studentId),
     courseId: Number(courseId),
     testName,
@@ -339,97 +385,120 @@ app.post("/tests", (req, res) => {
     mark: Number(mark),
     outOf: Number(outOf),
     weight: Number(weight)
-  };
-
-  tests.push(newTest);
-  saveJson(tests_file, tests);
+  });
 
   res.status(201).json(newTest);
 });
 
-app.put("/tests/:id", (req, res) => {
+app.put("/tests/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const test = tests.find(t => t.id === id);
-
-  if (!test) {
-    return res.status(404).json({ error: "Test not found" });
-  }
-
   const { studentId, courseId, testName, date, mark, outOf, weight } = req.body;
 
-  if (!studentId && !courseId && !testName && !date && mark === undefined && outOf === undefined && weight === undefined) {
+  if (
+    studentId === undefined &&
+    courseId === undefined &&
+    testName === undefined &&
+    date === undefined &&
+    mark === undefined &&
+    outOf === undefined &&
+    weight === undefined
+  ) {
     return res.status(400).json({ error: "No fields provided to update" });
   }
 
-    if (studentId !== undefined) {
-    const exists = students.some(s => s.id === Number(studentId));
-    if (!exists) {
-      return res.status(400).json({ error: "studentId is invalid!" });
-    }
+  const test = await Test.findOne({ id });
+  if (!test) return res.status(404).json({ error: "Test not found" });
+
+  if (studentId !== undefined) {
+    const exists = await Student.exists({ id: Number(studentId) });
+    if (!exists) return res.status(400).json({ error: "studentId is invalid!" });
     test.studentId = Number(studentId);
   }
 
-    if (courseId !== undefined) {
-    const exists = courses.some(c => c.id === Number(courseId));
-    if (!exists) {
-      return res.status(400).json({ error: "courseId is invalid!" });
-    }
+  if (courseId !== undefined) {
+    const exists = await Course.exists({ id: Number(courseId) });
+    if (!exists) return res.status(400).json({ error: "courseId is invalid!" });
     test.courseId = Number(courseId);
   }
 
-  
   if (testName !== undefined) test.testName = testName;
   if (date !== undefined) test.date = date;
   if (mark !== undefined) test.mark = Number(mark);
   if (outOf !== undefined) test.outOf = Number(outOf);
   if (weight !== undefined) test.weight = Number(weight);
 
-
-  saveJson(tests_file, tests);
-
+  await test.save();
   res.json(test);
 });
 
-
-app.delete("/tests/:id", (req, res) => {
+app.delete("/tests/:id", async (req, res) => {
   const id = Number(req.params.id);
-
-  const index = tests.findIndex(t => t.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: "Test not found" });
-  }
-
-  const deleted = tests.splice(index, 1)[0];
-  saveJson(tests_file, tests);
-
+  const deleted = await Test.findOneAndDelete({ id });
+  if (!deleted) return res.status(404).json({ error: "Test not found" });
   res.json(deleted);
 });
 
+// ----------------------
+// BONUS / EXTRA ROUTES
+// ----------------------
 
+// All tests for a student
+app.get("/students/:id/tests", async (req, res) => {
+  const studentId = Number(req.params.id);
+  const student = await Student.findOne({ id: studentId });
+  if (!student) return res.status(404).json({ error: "Student not found" });
+
+  const studentTests = await Test.find({ studentId }).sort({ id: 1 });
+  res.json(studentTests);
+});
+
+// All tests for a course
+app.get("/courses/:id/tests", async (req, res) => {
+  const courseId = Number(req.params.id);
+  const course = await Course.findOne({ id: courseId });
+  if (!course) return res.status(404).json({ error: "Course not found" });
+
+  const courseTests = await Test.find({ courseId }).sort({ id: 1 });
+  res.json(courseTests);
+});
+
+// Student average
+app.get("/students/:id/average", async (req, res) => {
+  const studentId = Number(req.params.id);
+  const student = await Student.findOne({ id: studentId });
+  if (!student) return res.status(404).json({ error: "Student not found" });
+
+  const studentTests = await Test.find({ studentId });
+
+  if (studentTests.length === 0) {
+    return res.json({ studentId, testCount: 0, average: null });
+  }
+
+  const percentages = studentTests.map(t => (t.mark / t.outOf) * 100);
+  const avg = percentages.reduce((a, b) => a + b, 0) / percentages.length;
+
+  res.json({ studentId, testCount: studentTests.length, average: avg });
+});
+
+// Course average
+app.get("/courses/:id/average", async (req, res) => {
+  const courseId = Number(req.params.id);
+  const course = await Course.findOne({ id: courseId });
+  if (!course) return res.status(404).json({ error: "Course not found" });
+
+  const courseTests = await Test.find({ courseId });
+
+  if (courseTests.length === 0) {
+    return res.json({ courseId, testCount: 0, average: null });
+  }
+
+  const percentages = courseTests.map(t => (t.mark / t.outOf) * 100);
+  const avg = percentages.reduce((a, b) => a + b, 0) / percentages.length;
+
+  res.json({ courseId, testCount: courseTests.length, average: avg });
+});
+
+// ----------------------
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });
-
-app.get("/courses/:id/average", (req, res) => {
-
-  const id = Number(req.params.id);
-  const course = courses.find(c => c.id === id);
-  if(!course){
-    return res.status(404).json({ error: "Course not found!" });
-  }
-  
-  const testCourses = tests.filter(t => t.courseId === id);
-
-  
-
-  const percent = testCourses.map(t => (t.mark / t.outOf) * 100);
-  const courseavg = percent.reduce((x, y) => x + y, 0) / percent.length;
-
-  res.json({ courseId: id, testCount: testCourses.length, average: courseavg });
-
-});
-
-
-
-
-
