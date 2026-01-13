@@ -1,6 +1,5 @@
 [
   {
-    "id": 1,
     "firstName": "Liam",
     "lastName": "Martinez",
     "grade": 12,
@@ -104,7 +103,6 @@
     "homeroom": "HR10D"
   },
   {
-    "id": 14,
     "firstName": "Harper",
     "lastName": "Bennett",
     "grade": 11,
@@ -112,7 +110,7 @@
     "homeroom": "HR11D"
   },
   {
-    "id": 15,
+  
     "firstName": "Benjamin",
     "lastName": "Cruz",
     "grade": 12,
