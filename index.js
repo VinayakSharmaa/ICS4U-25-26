@@ -25,6 +25,25 @@ function requireObjectId(id, res, label = "id") {
   return true;
 }
 
+/**
+ * Query helper:
+ * By default we return just the raw ObjectId fields (teacherId/studentId/courseId),
+ * and only populate if the client explicitly asks for it.
+ *
+ * Examples:
+ *   GET /courses?populate=teacher
+ *   GET /tests?populate=student,course
+ */
+function parsePopulateParam(populateStr) {
+  if (!populateStr) return new Set();
+  return new Set(
+    String(populateStr)
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean)
+  );
+}
+
 // ----------------------
 // Schemas / Models (using MongoDB _id)
 // ----------------------
@@ -95,7 +114,7 @@ app.get("/debug", async (req, res) => {
 // TEACHERS CRUD  (/teachers)
 // ======================
 app.get("/teachers", async (req, res) => {
-  const teachers = await Teacher.find().sort({ lastName: 1, firstName: 1 });
+  const teachers = await Teacher.find().sort({ lastName: 1, firstName: 1 }).lean();
   res.json(teachers);
 });
 
@@ -103,7 +122,7 @@ app.get("/teachers/:id", async (req, res) => {
   const { id } = req.params;
   if (!requireObjectId(id, res, "teacher _id")) return;
 
-  const teacher = await Teacher.findById(id);
+  const teacher = await Teacher.findById(id).lean();
   if (!teacher) return res.status(404).json({ error: "Teacher not found" });
 
   res.json(teacher);
@@ -117,9 +136,8 @@ app.post("/teachers", async (req, res) => {
     }
 
     const created = await Teacher.create({ firstName, lastName, email, department });
-    res.status(201).json(created);
+    res.status(201).json(created.toObject());
   } catch (err) {
-    // e.g. duplicate key if you later add unique indexes
     res.status(500).json({ error: "Server error", details: err.message });
   }
 });
@@ -148,14 +166,13 @@ app.put("/teachers/:id", async (req, res) => {
   if (department !== undefined) teacher.department = department;
 
   await teacher.save();
-  res.json(teacher);
+  res.json(teacher.toObject());
 });
 
 app.delete("/teachers/:id", async (req, res) => {
   const { id } = req.params;
   if (!requireObjectId(id, res, "teacher _id")) return;
 
-  // Optional: block delete if teacher is referenced by a course
   const used = await Course.exists({ teacherId: id });
   if (used) {
     return res.status(400).json({
@@ -166,23 +183,44 @@ app.delete("/teachers/:id", async (req, res) => {
   const deleted = await Teacher.findByIdAndDelete(id);
   if (!deleted) return res.status(404).json({ error: "Teacher not found" });
 
-  res.json(deleted);
+  res.json(deleted.toObject());
 });
 
 // ======================
 // COURSES CRUD (/courses)
 // ======================
+// Default: returns ONLY teacherId (ObjectId). Populate only if ?populate=teacher
 app.get("/courses", async (req, res) => {
-  // populate optional: include teacher details
-  const courses = await Course.find().populate("teacherId");
+  const pop = parsePopulateParam(req.query.populate);
+  const query = Course.find().sort({ code: 1 });
+
+  if (pop.has("teacher")) {
+    query.populate({
+      path: "teacherId",
+      select: "firstName lastName email department"
+    });
+  }
+
+  const courses = await query.lean();
   res.json(courses);
 });
 
+// Default: returns ONLY teacherId (ObjectId). Populate only if ?populate=teacher
 app.get("/courses/:id", async (req, res) => {
   const { id } = req.params;
   if (!requireObjectId(id, res, "course _id")) return;
 
-  const course = await Course.findById(id).populate("teacherId");
+  const pop = parsePopulateParam(req.query.populate);
+  const query = Course.findById(id);
+
+  if (pop.has("teacher")) {
+    query.populate({
+      path: "teacherId",
+      select: "firstName lastName email department"
+    });
+  }
+
+  const course = await query.lean();
   if (!course) return res.status(404).json({ error: "Course not found" });
 
   res.json(course);
@@ -213,7 +251,7 @@ app.post("/courses", async (req, res) => {
     schedule: schedule || ""
   });
 
-  res.status(201).json(created);
+  res.status(201).json(created.toObject());
 });
 
 app.put("/courses/:id", async (req, res) => {
@@ -252,14 +290,13 @@ app.put("/courses/:id", async (req, res) => {
   if (schedule !== undefined) course.schedule = schedule;
 
   await course.save();
-  res.json(course);
+  res.json(course.toObject());
 });
 
 app.delete("/courses/:id", async (req, res) => {
   const { id } = req.params;
   if (!requireObjectId(id, res, "course _id")) return;
 
-  // Optional: block delete if tests exist for this course
   const used = await Test.exists({ courseId: id });
   if (used) {
     return res.status(400).json({
@@ -270,14 +307,14 @@ app.delete("/courses/:id", async (req, res) => {
   const deleted = await Course.findByIdAndDelete(id);
   if (!deleted) return res.status(404).json({ error: "Course not found" });
 
-  res.json(deleted);
+  res.json(deleted.toObject());
 });
 
 // ======================
 // STUDENTS CRUD (/students)
 // ======================
 app.get("/students", async (req, res) => {
-  const students = await Student.find().sort({ lastName: 1, firstName: 1 });
+  const students = await Student.find().sort({ lastName: 1, firstName: 1 }).lean();
   res.json(students);
 });
 
@@ -285,7 +322,7 @@ app.get("/students/:id", async (req, res) => {
   const { id } = req.params;
   if (!requireObjectId(id, res, "student _id")) return;
 
-  const student = await Student.findById(id);
+  const student = await Student.findById(id).lean();
   if (!student) return res.status(404).json({ error: "Student not found" });
 
   res.json(student);
@@ -306,7 +343,7 @@ app.post("/students", async (req, res) => {
     homeroom: homeroom || ""
   });
 
-  res.status(201).json(created);
+  res.status(201).json(created.toObject());
 });
 
 app.put("/students/:id", async (req, res) => {
@@ -335,14 +372,13 @@ app.put("/students/:id", async (req, res) => {
   if (homeroom !== undefined) student.homeroom = homeroom;
 
   await student.save();
-  res.json(student);
+  res.json(student.toObject());
 });
 
 app.delete("/students/:id", async (req, res) => {
   const { id } = req.params;
   if (!requireObjectId(id, res, "student _id")) return;
 
-  // Optional: block delete if tests exist for this student
   const used = await Test.exists({ studentId: id });
   if (used) {
     return res.status(400).json({
@@ -353,15 +389,34 @@ app.delete("/students/:id", async (req, res) => {
   const deleted = await Student.findByIdAndDelete(id);
   if (!deleted) return res.status(404).json({ error: "Student not found" });
 
-  res.json(deleted);
+  res.json(deleted.toObject());
 });
 
 // ======================
 // TESTS CRUD (/tests)
 // ======================
+// Default: returns ONLY studentId/courseId (ObjectId). Populate only if asked:
+//   ?populate=student
+//   ?populate=course
+//   ?populate=student,course
 app.get("/tests", async (req, res) => {
-  // populate optional: show student/course docs
-  const tests = await Test.find().populate("studentId").populate("courseId");
+  const pop = parsePopulateParam(req.query.populate);
+  const query = Test.find().sort({ createdAt: -1 });
+
+  if (pop.has("student")) {
+    query.populate({
+      path: "studentId",
+      select: "firstName lastName grade studentNumber homeroom"
+    });
+  }
+  if (pop.has("course")) {
+    query.populate({
+      path: "courseId",
+      select: "code name teacherId semester room schedule"
+    });
+  }
+
+  const tests = await query.lean();
   res.json(tests);
 });
 
@@ -369,7 +424,23 @@ app.get("/tests/:id", async (req, res) => {
   const { id } = req.params;
   if (!requireObjectId(id, res, "test _id")) return;
 
-  const test = await Test.findById(id).populate("studentId").populate("courseId");
+  const pop = parsePopulateParam(req.query.populate);
+  const query = Test.findById(id);
+
+  if (pop.has("student")) {
+    query.populate({
+      path: "studentId",
+      select: "firstName lastName grade studentNumber homeroom"
+    });
+  }
+  if (pop.has("course")) {
+    query.populate({
+      path: "courseId",
+      select: "code name teacherId semester room schedule"
+    });
+  }
+
+  const test = await query.lean();
   if (!test) return res.status(404).json({ error: "Test not found" });
 
   res.json(test);
@@ -412,7 +483,7 @@ app.post("/tests", async (req, res) => {
     weight: Number(weight)
   });
 
-  res.status(201).json(created);
+  res.status(201).json(created.toObject());
 });
 
 app.put("/tests/:id", async (req, res) => {
@@ -461,7 +532,7 @@ app.put("/tests/:id", async (req, res) => {
   if (weight !== undefined) test.weight = Number(weight);
 
   await test.save();
-  res.json(test);
+  res.json(test.toObject());
 });
 
 app.delete("/tests/:id", async (req, res) => {
@@ -471,7 +542,7 @@ app.delete("/tests/:id", async (req, res) => {
   const deleted = await Test.findByIdAndDelete(id);
   if (!deleted) return res.status(404).json({ error: "Test not found" });
 
-  res.json(deleted);
+  res.json(deleted.toObject());
 });
 
 // ======================
@@ -479,26 +550,48 @@ app.delete("/tests/:id", async (req, res) => {
 // ======================
 
 // All tests for a student
+// Default: populate nothing. Optional: ?populate=course to include course docs
 app.get("/students/:id/tests", async (req, res) => {
   const { id } = req.params;
   if (!requireObjectId(id, res, "student _id")) return;
 
-  const student = await Student.findById(id);
+  const student = await Student.findById(id).lean();
   if (!student) return res.status(404).json({ error: "Student not found" });
 
-  const studentTests = await Test.find({ studentId: id }).populate("courseId");
+  const pop = parsePopulateParam(req.query.populate);
+  const query = Test.find({ studentId: id }).sort({ createdAt: -1 });
+
+  if (pop.has("course")) {
+    query.populate({
+      path: "courseId",
+      select: "code name teacherId semester room schedule"
+    });
+  }
+
+  const studentTests = await query.lean();
   res.json(studentTests);
 });
 
 // All tests for a course
+// Default: populate nothing. Optional: ?populate=student to include student docs
 app.get("/courses/:id/tests", async (req, res) => {
   const { id } = req.params;
   if (!requireObjectId(id, res, "course _id")) return;
 
-  const course = await Course.findById(id);
+  const course = await Course.findById(id).lean();
   if (!course) return res.status(404).json({ error: "Course not found" });
 
-  const courseTests = await Test.find({ courseId: id }).populate("studentId");
+  const pop = parsePopulateParam(req.query.populate);
+  const query = Test.find({ courseId: id }).sort({ createdAt: -1 });
+
+  if (pop.has("student")) {
+    query.populate({
+      path: "studentId",
+      select: "firstName lastName grade studentNumber homeroom"
+    });
+  }
+
+  const courseTests = await query.lean();
   res.json(courseTests);
 });
 
@@ -507,10 +600,10 @@ app.get("/students/:id/average", async (req, res) => {
   const { id } = req.params;
   if (!requireObjectId(id, res, "student _id")) return;
 
-  const student = await Student.findById(id);
+  const student = await Student.findById(id).lean();
   if (!student) return res.status(404).json({ error: "Student not found" });
 
-  const studentTests = await Test.find({ studentId: id });
+  const studentTests = await Test.find({ studentId: id }).lean();
 
   if (studentTests.length === 0) {
     return res.json({ studentId: id, testCount: 0, average: null });
@@ -529,10 +622,10 @@ app.get("/courses/:id/average", async (req, res) => {
   const { id } = req.params;
   if (!requireObjectId(id, res, "course _id")) return;
 
-  const course = await Course.findById(id);
+  const course = await Course.findById(id).lean();
   if (!course) return res.status(404).json({ error: "Course not found" });
 
-  const courseTests = await Test.find({ courseId: id });
+  const courseTests = await Test.find({ courseId: id }).lean();
 
   if (courseTests.length === 0) {
     return res.json({ courseId: id, testCount: 0, average: null });
@@ -558,4 +651,3 @@ app.get("/__version", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });
-
